@@ -1,0 +1,2 @@
+[console_scripts]
+learning-loop = learning_loop.cli:main
