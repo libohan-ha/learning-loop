@@ -9,6 +9,11 @@ def row(r): return dict(r) if r else None
 class RuleError(ValueError): pass
 
 def event(c,t,i,a,p=None): c.execute("INSERT INTO events(entity_type,entity_id,action,payload) VALUES(?,?,?,?)",(t,i,a,json.dumps(p,ensure_ascii=False) if p else None))
+def schedule_guard(c,uid,subject,title,due):
+    c.execute("UPDATE reminders SET status='CANCELLED',updated_at=CURRENT_TIMESTAMP WHERE unit_id=? AND kind='GUARD' AND status='PENDING'",(uid,))
+    msg=f"⏰ 学习护栏到了：{subject}｜{title}\n请选择：回来闭环、延长10–30分钟、暂停并记录下一步，或休息后继续。"
+    c.execute("INSERT INTO reminders(unit_id,kind,due_at,message) VALUES(?,?,?,?)",(uid,'GUARD',iso(due),msg))
+def cancel_guard(c,uid): c.execute("UPDATE reminders SET status='CANCELLED',updated_at=CURRENT_TIMESTAMP WHERE unit_id=? AND kind='GUARD' AND status='PENDING'",(uid,))
 def get_unit(c,uid):
     x=c.execute("SELECT * FROM units WHERE id=?",(uid,)).fetchone()
     if not x: raise RuleError("学习单元不存在")
@@ -25,7 +30,7 @@ def start_unit(subject,title,objective,practice_plan,guard_minutes=60,path=None)
         if pending>=3: raise RuleError("全局待闭环单元已达3个，请先处理旧单元")
         due=now()+timedelta(minutes=guard_minutes)
         cur=c.execute("INSERT INTO units(subject,title,objective,practice_plan,guard_minutes,guard_due_at) VALUES(?,?,?,?,?,?)",(subject,title.strip(),objective.strip(),practice_plan.strip(),guard_minutes,iso(due)))
-        uid=cur.lastrowid; event(c,"unit",uid,"START",{"guard_due_at":iso(due)}); c.commit(); return row(get_unit(c,uid))
+        uid=cur.lastrowid; schedule_guard(c,uid,subject,title.strip(),due); event(c,"unit",uid,"START",{"guard_due_at":iso(due)}); c.commit(); return row(get_unit(c,uid))
     finally:c.close()
 def list_units(path=None,subject=None,flow=None,mastery=None):
     init_db(path); c=connect(path); q="SELECT * FROM units WHERE 1=1"; p=[]
@@ -55,12 +60,13 @@ def checkpoint(uid,action,minutes=None,position=None,blocker=None,next_action=No
             if u['guard_extensions']>=2:raise RuleError("已经延长两次，请拆分或暂停")
             m=int(minutes or 20)
             if not 10<=m<=30:raise RuleError("每次只能延长10到30分钟")
-            c.execute("UPDATE units SET flow_status='ACTIVE',guard_due_at=?,guard_extensions=guard_extensions+1,updated_at=CURRENT_TIMESTAMP WHERE id=?",(iso(now()+timedelta(minutes=m)),uid))
+            due=now()+timedelta(minutes=m); c.execute("UPDATE units SET flow_status='ACTIVE',guard_due_at=?,guard_extensions=guard_extensions+1,updated_at=CURRENT_TIMESTAMP WHERE id=?",(iso(due),uid)); schedule_guard(c,uid,u['subject'],u['title'],due)
         elif action in ('pause','rest'):
             if not next_action:raise RuleError("暂停时必须记录下一步")
-            c.execute("UPDATE units SET flow_status='PENDING',current_position=?,blocker=?,next_action=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",(position,blocker,next_action,uid))
-        elif action=='resume': c.execute("UPDATE units SET flow_status='ACTIVE',guard_due_at=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",(iso(now()+timedelta(minutes=u['guard_minutes'])),uid))
-        elif action=='close': c.execute("UPDATE units SET stage='PRACTICING',updated_at=CURRENT_TIMESTAMP WHERE id=?",(uid,))
+            c.execute("UPDATE units SET flow_status='PENDING',current_position=?,blocker=?,next_action=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",(position,blocker,next_action,uid)); cancel_guard(c,uid)
+        elif action=='resume':
+            due=now()+timedelta(minutes=u['guard_minutes']); c.execute("UPDATE units SET flow_status='ACTIVE',guard_due_at=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",(iso(due),uid)); schedule_guard(c,uid,u['subject'],u['title'],due)
+        elif action=='close': c.execute("UPDATE units SET stage='PRACTICING',updated_at=CURRENT_TIMESTAMP WHERE id=?",(uid,)); cancel_guard(c,uid)
         else:raise RuleError("未知检查点动作")
         event(c,"unit",uid,"CHECKPOINT",{"action":action});c.commit();return unit_detail(uid,path)
     finally:c.close()
@@ -95,7 +101,7 @@ def close_unit(uid,importance,follow_up_action='none',follow_up_answer=None,path
         if not u['practice_result'] or not u['extraction']:raise RuleError("关闭前必须有实践证据和自己的话提炼")
         if u['follow_up_status']=='OPEN' and follow_up_action not in ('answer','correct_ai','defer'):raise RuleError("AI关键追问必须回答、纠正或明确延后")
         mastery=Mastery.FRAGILE if follow_up_action=='defer' or u['practice_result']=='FAILED' else Mastery.UNTESTED
-        c.execute("UPDATE units SET flow_status='CLOSED',stage='DONE',mastery_status=?,importance=?,follow_up_status=?,closed_at=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",(mastery,importance,follow_up_action.upper(),iso(now()),uid))
+        c.execute("UPDATE units SET flow_status='CLOSED',stage='DONE',mastery_status=?,importance=?,follow_up_status=?,closed_at=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",(mastery,importance,follow_up_action.upper(),iso(now()),uid)); cancel_guard(c,uid)
         days=1 if mastery==Mastery.FRAGILE else (3 if importance==Importance.CORE else 5)
         c.execute("INSERT INTO reviews(unit_id,pool,due_at,priority) VALUES(?,?,?,?)",(uid,ReviewPool.SHORT,iso(now()+timedelta(days=days)),100 if importance==Importance.CORE else 50))
         event(c,"unit",uid,"CLOSE",{"mastery":mastery});c.commit();return unit_detail(uid,path)

@@ -10,6 +10,7 @@ class FlowTests(unittest.TestCase):
  def tearDown(self):self.tmp.cleanup()
  def test_full_loop_and_review(self):
   u=s.start_unit('数学','抽象逆矩阵','识别互逆关系','独立完成同类题',30,self.db)
+  c=connect(self.db);self.assertEqual(c.execute("SELECT count(*) n FROM reminders WHERE status='PENDING'").fetchone()['n'],1);c.close()
   u=s.submit_practice(u['id'],'做题','INDEPENDENT','SUCCESS','独立完成3题',path=self.db)
   self.assertEqual(u['stage'],'EXTRACTING')
   u=s.submit_extraction(u['id'],'看到AB=E时优先想到互逆关系，再利用可逆性质变形，避免直接展开硬算。','出现AB=E时优先想到什么？',self.db)
