@@ -29,6 +29,15 @@ python3 /home/ubuntu/learning-loop/skills/learning-loop/scripts/learning_loop.py
 7. A material follow-up must be answered, corrected with stronger evidence, or explicitly deferred. Deferral closes flow at no better than FRAGILE and schedules early review.
 8. AI advice never grants CLOSED, RELIABLE, or MAINTAINED. The CLI owns all state.
 9. During review, show only saved questions first. Record recall and application separately as INDEPENDENT/HINTED/REVEALED/FAILED/NOT_TESTED.
+10. After an extraction is accepted or a meaningful method/insight emerges during learning, save it to Kaoyan Agent automatically—do not wait for a separate “记录一下” request. This is explicit standing consent for learning content produced inside this workflow only.
+    - Load and follow `/home/ubuntu/.claude/skills/kaoyan-agent-api/SKILL.md` before saving.
+    - Save only the distilled, user-owned conclusion: knowledge point, reusable problem-solving method, mistake pattern, trigger signal, or exam-relevant insight.
+    - Do not save raw chat, temporary guesses, AI-only suggestions, unanswered questions, routine progress, durations, emotions, or low-confidence claims.
+    - If AI found a material unresolved error, do not sync until the user resolves it or provides stronger evidence.
+    - Map subjects: 数学→数学, 英语→英语, 408→计算机, 政治→政治. Add concise topic tags and one of `学习闭环`, `题型方法`, `错因`, or `学习方法` when appropriate.
+    - Prefer one complete, concise record combining the unit title, trigger signal, core action, reason/caution, and corrected insight. Avoid duplicates; if an equivalent record already exists, do not create another.
+    - Saving to Kaoyan Agent is a side effect after Learning Loop state has been safely saved. If Kaoyan Agent fails, keep the learning-loop data intact, report the exact error, and offer to retry the sync.
+    - Tell the user the Kaoyan Agent record ID after a successful save.
 
 ## Commands
 
