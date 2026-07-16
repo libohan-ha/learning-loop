@@ -15,7 +15,12 @@ python3 /home/ubuntu/learning-loop/skills/learning-loop/scripts/learning_loop.py
 
 1. On entering a subject, run `due <subject>` before starting new material. Offer at most 5 items. The user may reduce, replace, or explicitly skip with a reason.
 2. Start a unit with a concrete objective, practice plan, and 10–180 minute guard.
-3. Stay quiet while the user studies. At the guard time, ask: close, extend 10–30 minutes, split, pause with next action, or rest then continue. Never infer completion from elapsed time.
+3. Every `start` command automatically creates a persistent WeChat guard reminder—no separate cron/alarm command is needed. Tell the user the exact reminder time returned as `guard_due_at`. Stay quiet while the user studies. At the guard time, the `learning-loop-reminder` service proactively messages the user in WeChat with these choices: close, extend 10–30 minutes, split, pause with next action, or rest then continue. Never infer completion from elapsed time.
+   - `checkpoint ... extend` automatically cancels the old reminder and schedules a new one.
+   - `pause`, `close`, and entering the closure stage cancel the pending reminder.
+   - `resume` schedules a fresh reminder using the unit guard duration.
+   - Do not claim you lack alarm capability. For Learning Loop units, the server reminder worker is the alarm capability.
+   - If the user asks for an unrelated general alarm, explain that this skill only schedules learning-unit guard reminders.
 4. On “回来闭环”, collect practice evidence first:
    - practice type
    - independence: INDEPENDENT/HINTED/REVEALED
