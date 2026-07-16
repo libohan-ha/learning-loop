@@ -1,6 +1,6 @@
 ---
 name: learning-loop
-description: Run the user's postgraduate-exam learning workflow: enter a subject, start/resume a small learning unit, enforce independent practice and own-words extraction, audit an extraction, close or pause a unit, handle guard checkpoints, perform active reviews, and report the seven-day experiment. Use for “开始学数学/408/英语/政治”, “开始一个学习单元”, “回来闭环”, “我做完题了”, “用自己的话说”, “复盘”, “暂停/继续”, or “看看学习闭环数据”.
+description: "Run the user's postgraduate-exam learning workflow: enter a subject, start or resume a small learning unit, enforce independent practice and own-words extraction, audit an extraction, close or pause a unit, handle automatic WeChat guard reminders, perform active reviews, and report the seven-day experiment. Use for 开始学数学/408/英语/政治, 开始一个学习单元, 回来闭环, 我做完题了, 用自己的话说, 复盘, 暂停/继续, or 看看学习闭环数据."
 ---
 
 # Learning Loop
